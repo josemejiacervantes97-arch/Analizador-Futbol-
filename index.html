@@ -72,7 +72,11 @@ function pct(p){return p===null||!Number.isFinite(p)?'—':(p*100).toFixed(1)+'%
 function odd(n){const x=Number(n);return Number.isFinite(x)&&x>1?x:null}
 function dateTime(s){try{return new Date(s).toLocaleString('es-CO',{dateStyle:'medium',timeStyle:'short'})}catch(e){return s||''}}
 async function api(path,key){
- const res=await fetch('https://v3.football.api-sports.io'+path,{headers:{'x-apisports-key':key}});
+
+const url = 'https://v3.football.api-sports.io' + path;
+status('URL enviada: ' + url);
+const res = await fetch(url, {headers: {'x-apisports-key': key}});
+
  const body=await res.json().catch(()=>({}));
  if(!res.ok||body.errors&&Object.keys(body.errors).length)throw new Error(JSON.stringify(body.errors||('HTTP '+res.status)));
  return body;
