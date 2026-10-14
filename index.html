@@ -132,7 +132,14 @@ async function searchAll(){
  $('search').disabled=true;$('search').textContent='Consultando…';matches=[];picks=[];renderResults();
  try{
   status('Consultando partidos de todas las competiciones disponibles…');
-  const fx=await api(`/fixtures?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&timezone=America%2FBogota`,key);
+
+const params = new URLSearchParams({
+  from: from,
+  to: to,
+  timezone: 'America/Bogota'
+});
+const fx = await api(`/fixtures?${params.toString()}`, key);
+
   const all=(fx.response||[]).filter(x=>x.fixture?.status?.short==='NS').slice(0,Number($('maxMatches').value));
   if(!all.length){status('La API respondió, pero no devolvió partidos próximos en ese rango. Verifica fechas, cobertura y plan.','warn');matches=[];renderResults();return}
   matches=all.map(f=>({fixture:f.fixture,teams:f.teams,league:f.league,home:f.teams?.home?.name||'Local',away:f.teams?.away?.name||'Visitante',pred:null,odds:[]}));
