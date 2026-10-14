@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123c32">
+<title>Analizador de Fútbol 2.0</title>
+<style>
+:root{--g:#123c32;--g2:#1d624d;--bg:#f3f7f4;--ink:#17231f;--muted:#627169;--line:#dbe5de;--card:#fff;--warn:#fff4d8;--good:#e9f6e8;--bad:#fff0ee}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+header{background:var(--g);color:#fff;padding:24px 16px}header>div,main,footer{max-width:1080px;margin:auto}h1{font-size:clamp(1.55rem,5vw,2.2rem);margin:0 0 7px;line-height:1.15}header p{margin:0;color:#d7e6df}.tag{font-size:.76rem;letter-spacing:.06em;font-weight:800;color:#d8f3a8}
+main{padding:16px;display:grid;gap:15px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:17px;min-width:0}h2{font-size:1.12rem;margin:0 0 12px}h3{font-size:1rem;margin:18px 0 8px}.muted,.note{color:var(--muted);font-size:.88rem}.note{margin:8px 0 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:5px}.field label{font-size:.86rem;color:var(--muted);font-weight:650}input,select{width:100%;min-width:0;border:1px solid #bccbc1;border-radius:10px;padding:11px;background:white;color:var(--ink);font:inherit}button{font:inherit;font-weight:750;border:0;border-radius:10px;padding:12px 15px;cursor:pointer}.primary{background:var(--g);color:#fff}.secondary{background:#e7f0ea;color:var(--g)}.danger{background:var(--bad);color:#8f271d}.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:13px}.status{border-radius:11px;padding:11px 12px;background:#edf3ef;font-size:.9rem;margin-top:10px;overflow-wrap:anywhere}.status.warn{background:var(--warn)}.status.good{background:var(--good)}.status.error{background:var(--bad)}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.metric{background:#eff5f0;border-radius:12px;padding:11px;text-align:center}.metric small{display:block;color:var(--muted);font-size:.77rem}.metric b{font-size:1.3rem;display:block}.match{border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:10px}.matchhead{display:flex;justify-content:space-between;align-items:start;gap:10px}.match h3{margin:0;font-size:1rem}.badge{display:inline-block;border-radius:20px;background:#e8f5e6;color:#275b31;padding:3px 8px;font-size:.76rem;font-weight:800}.badge.neutral{background:#edf0ee;color:#55635b}.badge.warn{background:#fff0d0;color:#805400}.matchgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.mini{background:#f5f8f6;border-radius:9px;padding:9px}.mini small{display:block;color:var(--muted);font-size:.75rem}.mini b{font-size:1rem}.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{text-align:left;border-bottom:1px solid var(--line);padding:9px 7px;white-space:nowrap}th{font-size:.78rem;color:var(--muted)}footer{padding:0 16px 28px;color:var(--muted);font-size:.82rem}.hidden{display:none!important}
+@media(min-width:800px){main{grid-template-columns:1fr 1fr}.full{grid-column:1/-1}.card{padding:20px}}
+@media(max-width:460px){.grid{grid-template-columns:1fr}.matchgrid{grid-template-columns:1fr 1fr}.matchgrid .mini:last-child{grid-column:1/-1}.metrics{grid-template-columns:1fr 1fr}.metrics .metric:last-child{grid-column:1/-1}}
+</style></head>
+<body>
+<header><div><div class="tag">VERSIÓN 2.0 · DATOS EN VIVO CON API</div><h1>⚽ Analizador de Fútbol</h1><p>Busca partidos, compara probabilidades y detecta posibles diferencias entre pronóstico y cuota.</p></div></header>
+<main>
+<section class="card">
+<h2>1. Conectar datos deportivos</h2>
+<p class="muted">Esta versión usa API-Football para consultar partidos, predicciones y cuotas disponibles. Necesitas una clave API propia. La cobertura y el límite diario dependen del plan contratado.</p>
+<div class="field"><label for="apiKey">Clave API-Football</label><input id="apiKey" type="password" autocomplete="off" placeholder="Pega aquí tu clave API"></div>
+<div class="actions"><button class="primary" id="saveKey">Guardar clave en este dispositivo</button><button class="secondary" id="forgetKey">Olvidar clave</button></div>
+<p class="note">La clave se guarda solo en el almacenamiento local de este navegador. No la publiques ni la compartas. Para una aplicación pública de varios usuarios, la clave debe moverse a un servidor protegido.</p>
+<div id="apiStatus" class="status" aria-live="polite">Sin conectar. Añade tu clave y pulsa “Buscar partidos”.</div>
+</section>
+<section class="card">
+<h2>2. Búsqueda automática</h2>
+<div class="grid">
+<div class="field"><label for="fromDate">Desde</label><input id="fromDate" type="date"></div>
+<div class="field"><label for="toDate">Hasta</label><input id="toDate" type="date"></div>
+<div class="field"><label for="maxMatches">Máximo de partidos a analizar</label><select id="maxMatches"><option value="10">10 partidos</option><option value="20" selected>20 partidos</option><option value="30">30 partidos</option></select></div>
+<div class="field"><label for="minEdge">Ventaja estimada mínima</label><select id="minEdge"><option value="0">0% (mostrar todos)</option><option value="0.03" selected>3%</option><option value="0.05">5%</option><option value="0.08">8%</option></select></div>
+<div class="field"><label for="minProb">Probabilidad mínima</label><select id="minProb"><option value="0.40">40%</option><option value="0.50" selected>50%</option><option value="0.60">60%</option><option value="0.70">70%</option></select></div>
+<div class="field"><label for="minOdds">Cuota decimal mínima</label><select id="minOdds"><option value="1.01">1.01</option><option value="1.30">1.30</option><option value="1.50" selected>1.50</option><option value="1.80">1.80</option></select></div>
+</div>
+<div class="actions"><button class="primary" id="search">Buscar partidos y analizar</button><button class="secondary" id="clearResults">Limpiar resultados</button></div>
+<p class="note">La búsqueda abarca las competiciones que la API tenga disponibles. Se consultan primero los partidos y después, dentro del límite elegido, sus predicciones y cuotas. Esto puede consumir varias solicitudes de tu cuota API.</p>
+</section>
+<section class="card full">
+<h2>3. Apuestas potenciales detectadas</h2>
+<div class="metrics"><div class="metric"><small>Partidos encontrados</small><b id="mMatches">0</b></div><div class="metric"><small>Mercados con cuota</small><b id="mOdds">0</b></div><div class="metric"><small>Oportunidades filtradas</small><b id="mPicks">0</b></div></div>
+<div id="results"><p class="note">Configura la clave API y pulsa “Buscar partidos y analizar”.</p></div>
+</section>
+<section class="card full">
+<h2>4. Historial de análisis</h2>
+<p class="note">El historial registra las oportunidades detectadas en este navegador. Esta versión todavía no obtiene automáticamente el resultado final para liquidar pronósticos.</p>
+<div class="actions"><button class="secondary" id="export">Exportar historial CSV</button><button class="danger" id="clearHistory">Borrar historial local</button></div>
+<div id="history"></div>
+</section>
+<section class="card full">
+<h2>Cómo interpretar los resultados</h2>
+<ul>
+<li><b>Probabilidad:</b> estimación de la fuente de datos, no una certeza ni garantía de acierto.</li>
+<li><b>Probabilidad implícita:</b> 1 dividido entre la cuota decimal; no elimina por sí sola el margen de la casa.</li>
+<li><b>Ventaja estimada:</b> (probabilidad estimada × cuota) − 1. Es una señal preliminar, no prueba de valor real.</li>
+<li><b>Filtro:</b> solo muestra mercados que tienen probabilidad y cuota disponibles y cumplen los límites que elegiste.</li>
+<li><b>Sin datos no hay pronóstico:</b> no se inventan cuotas ni predicciones cuando la API no los entrega.</li>
+</ul>
+<div class="status warn">Importante: la versión 2.0 es un prototipo de investigación. Las predicciones de terceros pueden tener cobertura desigual; las cuotas pueden cambiar. No apuesta automáticamente ni promete ganancias. Evalúa muchos pronósticos y la calibración antes de confiar en el modelo.</div>
+</section>
+</main>
+<footer>Analizador de Fútbol 2.0 · Compatible con navegadores modernos de celular y computador. Requiere Internet y una clave API para obtener datos actuales.</footer>
+<script>
+const $=id=>document.getElementById(id);
+const today=new Date();const dateFmt=d=>{const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,10)};
+$('fromDate').value=dateFmt(today);const week=new Date(today);week.setDate(week.getDate()+7);$('toDate').value=dateFmt(week);
+let matches=[], picks=[];
+function status(msg,kind=''){const el=$('apiStatus');el.className='status '+kind;el.textContent=msg}
+function getKey(){return $('apiKey').value.trim()||localStorage.getItem('af_api_key')||''}
+function parsePercent(s){if(s===null||s===undefined)return null;const raw=String(s).trim();const n=parseFloat(raw.replace('%','').replace(',','.'));return Number.isFinite(n)?(raw.includes('%')||n>1?n/100:n):null}
+function pct(p){return p===null||!Number.isFinite(p)?'—':(p*100).toFixed(1)+'%'}
+function odd(n){const x=Number(n);return Number.isFinite(x)&&x>1?x:null}
+function dateTime(s){try{return new Date(s).toLocaleString('es-CO',{dateStyle:'medium',timeStyle:'short'})}catch(e){return s||''}}
+async function api(path,key){
+ const res=await fetch('https://v3.football.api-sports.io'+path,{headers:{'x-apisports-key':key}});
+ const body=await res.json().catch(()=>({}));
+ if(!res.ok||body.errors&&Object.keys(body.errors).length)throw new Error(JSON.stringify(body.errors||('HTTP '+res.status)));
+ return body;
+}
+function marketOdds(body){
+ const out=[];
+ for(const item of body.response||[])for(const book of item.bookmakers||[])for(const bet of book.bets||[]){
+  const name=(bet.name||'').toLowerCase();
+  // First version intentionally supports comparable 1X2 and common totals/BTTS only.
+  let market=null;
+  if(/match winner|1x2|winner/.test(name))market='1X2';
+  else if(/over\/under|total goals/.test(name))market='Goles';
+  else if(/both teams score|both teams to score/.test(name))market='Ambos marcan';
+  if(!market)continue;
+  for(const v of bet.values||[])out.push({market,book:book.name||'Casa no indicada',value:v.value,odd:odd(v.odd)});
+ }
+ return out.filter(x=>x.odd);
+}
+function findPrediction(body){
+ const r=body.response&&body.response[0];if(!r)return null;
+ const p=r.predictions||{};const per=p.percent||{};
+ const h=parsePercent(per.home),d=parsePercent(per.draw),a=parsePercent(per.away);
+ if(h===null||d===null||a===null)return null;
+ return {home:h,draw:d,away:a,advice:p.advice||'',underOver:p.under_over||''};
+}
+function potentialPicks(fix,pred,odds){
+ const minEdge=Number($('minEdge').value),minProb=Number($('minProb').value),minOdds=Number($('minOdds').value);
+ const home=fix.teams?.home?.name||'Local',away=fix.teams?.away?.name||'Visitante';const out=[];
+ const candidates=[{label:'Gana local',p:pred?.home,rx:/^(home|1|team 1)$/i},{label:'Empate',p:pred?.draw,rx:/^(draw|x)$/i},{label:'Gana visitante',p:pred?.away,rx:/^(away|2|team 2)$/i}];
+ for(const c of candidates){if(c.p===null||c.p===undefined)continue;const matches=odds.filter(o=>o.market==='1X2'&&c.rx.test(String(o.value).trim()));if(!matches.length)continue;matches.sort((a,b)=>b.odd-a.odd);const best=matches[0],edge=c.p*best.odd-1;if(best.odd>=minOdds&&c.p>=minProb&&edge>=minEdge)out.push({home,away,fixtureId:fix.fixture.id,date:fix.fixture.date,league:fix.league?.name||'Competición',market:c.label,p:c.p,odd:best.odd,book:best.book,edge,implied:1/best.odd,reason:'Comparación de probabilidad estimada con la cuota disponible.'})}
+ // Totals and BTTS are shown as available odds, but only filtered when exact value can be mapped reliably.
+ for(const o of odds.filter(o=>o.market!=='1X2')){
+   let p=null,label=o.market+' '+o.value;
+   const val=String(o.value).toLowerCase();
+   if(o.market==='Goles'&&pred?.underOver){
+     const po=String(pred.underOver).toLowerCase();
+     if(val===po||val.replace(/\s/g,'')===po.replace(/\s/g,''))p=null;
+   }
+   // No inferred probability for totals/BTTS without a matching probability output.
+ }
+ return out;
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderResults(){
+ $('mMatches').textContent=matches.length;$('mOdds').textContent=matches.reduce((n,m)=>n+m.odds.length,0);$('mPicks').textContent=picks.length;
+ if(!matches.length){$('results').innerHTML='<p class="note">No hay resultados. Ejecuta una búsqueda.</p>';return}
+ const sorted=picks.slice().sort((a,b)=>b.edge-a.edge);
+ let html='';
+ if(sorted.length)html='<p class="note">Ordenadas por ventaja estimada preliminar. Comprueba siempre la hora de la cuota y la disponibilidad del mercado.</p>'+sorted.map(p=>`<article class="match"><div class="matchhead"><div><h3>${esc(p.home)} vs. ${esc(p.away)}</h3><div class="muted">${esc(p.league)} · ${esc(dateTime(p.date))}</div></div><span class="badge">${(p.edge*100).toFixed(1)}% ventaja</span></div><div class="matchgrid"><div class="mini"><small>Mercado</small><b>${esc(p.market)}</b></div><div class="mini"><small>Probabilidad</small><b>${pct(p.p)}</b></div><div class="mini"><small>Cuota / casa</small><b>${p.odd.toFixed(2)}</b><small>${esc(p.book)}</small></div><div class="mini"><small>Prob. implícita</small><b>${pct(p.implied)}</b></div><div class="mini"><small>Valor esperado bruto</small><b>${(p.edge*100).toFixed(1)}%</b></div><div class="mini"><small>Estado</small><b>Potencial</b></div></div><p class="note">${esc(p.reason)} No es garantía de ganancia.</p></article>`).join('');
+ else html='<div class="status warn">No se encontraron selecciones que cumplan tus filtros. Esto no significa que debas bajar los filtros: puede que no haya valor aparente o que falten cuotas/predicciones.</div>';
+ html+='<h3>Partidos consultados</h3><div class="tablewrap"><table><thead><tr><th>Partido</th><th>Competición</th><th>Inicio</th><th>Predicción</th><th>Cuotas recibidas</th></tr></thead><tbody>'+matches.map(m=>`<tr><td>${esc(m.home)} – ${esc(m.away)}</td><td>${esc(m.league)}</td><td>${esc(dateTime(m.date))}</td><td>${m.pred?`L ${pct(m.pred.home)} / E ${pct(m.pred.draw)} / V ${pct(m.pred.away)}`:'No disponible'}</td><td>${m.odds.length}</td></tr>`).join('')+'</tbody></table></div>';
+ $('results').innerHTML=html;
+}
+async function searchAll(){
+ const key=getKey();if(!key){status('Primero pega una clave API-Football válida. Consulta el enlace de registro que aparece debajo de esta sección.','warn');return}
+ const from=$('fromDate').value,to=$('toDate').value;if(!from||!to||to<from){status('Revisa las fechas: “Hasta” debe ser igual o posterior a “Desde”.','error');return}
+ $('search').disabled=true;$('search').textContent='Consultando…';matches=[];picks=[];renderResults();
+ try{
+  status('Consultando partidos de todas las competiciones disponibles…');
+  const fx=await api(`/fixtures?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&timezone=America%2FBogota`,key);
+  const all=(fx.response||[]).filter(x=>x.fixture?.status?.short==='NS').slice(0,Number($('maxMatches').value));
+  if(!all.length){status('La API respondió, pero no devolvió partidos próximos en ese rango. Verifica fechas, cobertura y plan.','warn');matches=[];renderResults();return}
+  matches=all.map(f=>({fixture:f.fixture,teams:f.teams,league:f.league,home:f.teams?.home?.name||'Local',away:f.teams?.away?.name||'Visitante',pred:null,odds:[]}));
+  renderResults();
+  for(let i=0;i<matches.length;i++){
+   const m=matches[i];status(`Analizando partido ${i+1} de ${matches.length}: ${m.home} – ${m.away}. La consulta puede tardar y consumir solicitudes API.`);
+   const tasks=await Promise.allSettled([
+    api(`/predictions?fixture=${m.fixture.id}`,key),
+    api(`/odds?fixture=${m.fixture.id}`,key)
+   ]);
+   if(tasks[0].status==='fulfilled')m.pred=findPrediction(tasks[0].value);
+   if(tasks[1].status==='fulfilled')m.odds=marketOdds(tasks[1].value);
+   if(m.pred)picks.push(...potentialPicks(m.fixture?{fixture:m.fixture,teams:m.teams,league:m.league}:m,m.pred,m.odds));
+   renderResults();
+  }
+  saveHistory(picks);
+  status(`Proceso terminado. ${matches.length} partidos revisados; ${picks.length} selecciones cumplen tus filtros. Revisa si hubo errores o datos ausentes.`, 'good');
+ }catch(e){status('No se pudo completar la consulta: '+e.message+' Comprueba la clave, los permisos del plan, la conexión y el límite de solicitudes.','error')}
+ finally{$('search').disabled=false;$('search').textContent='Buscar partidos y analizar'}
+}
+function saveHistory(newPicks){if(!newPicks.length)return;try{const old=JSON.parse(localStorage.getItem('af_history')||'[]');const now=new Date().toLocaleString('es-CO');const newRows=newPicks.map(p=>({...p,analyzedAt:now}));localStorage.setItem('af_history',JSON.stringify(old.concat(newRows).slice(-1000)));renderHistory()}catch(e){}}
+function renderHistory(){let h=[];try{h=JSON.parse(localStorage.getItem('af_history')||'[]')}catch(e){};if(!h.length){$('history').innerHTML='<p class="note">Aún no hay oportunidades guardadas.</p>';return}$('history').innerHTML='<div class="tablewrap"><table><thead><tr><th>Fecha de análisis</th><th>Partido</th><th>Mercado</th><th>Prob.</th><th>Cuota</th><th>Ventaja</th></tr></thead><tbody>'+h.slice().reverse().map(p=>`<tr><td>${esc(p.analyzedAt)}</td><td>${esc(p.home)} – ${esc(p.away)}</td><td>${esc(p.market)}</td><td>${pct(p.p)}</td><td>${Number(p.odd).toFixed(2)}</td><td>${(p.edge*100).toFixed(1)}%</td></tr>`).join('')+'</tbody></table></div>'}
+$('saveKey').addEventListener('click',()=>{const k=$('apiKey').value.trim();if(!k){status('Pega primero tu clave API.','warn');return}localStorage.setItem('af_api_key',k);status('Clave guardada en este navegador. Pulsa “Buscar partidos y analizar” para probarla.','good')});
+$('forgetKey').addEventListener('click',()=>{$('apiKey').value='';localStorage.removeItem('af_api_key');status('Clave eliminada de este navegador.','good')});
+$('search').addEventListener('click',searchAll);
+$('clearResults').addEventListener('click',()=>{matches=[];picks=[];renderResults();status('Resultados de esta sesión limpiados.')});
+$('export').addEventListener('click',()=>{let h=[];try{h=JSON.parse(localStorage.getItem('af_history')||'[]')}catch(e){}if(!h.length){alert('No hay historial.');return}const cols=['analyzedAt','date','league','home','away','market','p','odd','implied','edge','book'];const csv=[cols.join(','),...h.map(r=>cols.map(c=>JSON.stringify(r[c]??'')).join(','))].join('\n');const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='historial_apuestas_potenciales.csv';a.click();URL.revokeObjectURL(a.href)});
+$('clearHistory').addEventListener('click',()=>{if(confirm('¿Borrar el historial local de oportunidades?')){localStorage.removeItem('af_history');renderHistory()}});
+$('apiKey').value=localStorage.getItem('af_api_key')||'';renderHistory();
+</script>
+</body></html>
