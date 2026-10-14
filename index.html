@@ -144,7 +144,7 @@ const params = new URLSearchParams({
   to: to,
   timezone: 'America/Bogota'
 });
-const fx = await api(`/fixtures?${params.toString()}`, key);
+const fx = await api(`/fixtures?date=${from}`, key);
 
   const all=(fx.response||[]).filter(x=>x.fixture?.status?.short==='NS').slice(0,Number($('maxMatches').value));
   if(!all.length){status('La API respondió, pero no devolvió partidos próximos en ese rango. Verifica fechas, cobertura y plan.','warn');matches=[];renderResults();return}
