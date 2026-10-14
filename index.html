@@ -78,7 +78,9 @@ status('URL enviada: ' + url);
 const res = await fetch(url, {headers: {'x-apisports-key': key}});
 
  const body=await res.json().catch(()=>({}));
- if(!res.ok||body.errors&&Object.keys(body.errors).length)throw new Error(JSON.stringify(body.errors||('HTTP '+res.status)));
+ 
+if(!res.ok||body.errors&&Object.keys(body.errors).length)throw new Error('URL consultada: '+url+' | '+JSON.stringify(body.errors||('HTTP '+res.status)));
+
  return body;
 }
 function marketOdds(body){
